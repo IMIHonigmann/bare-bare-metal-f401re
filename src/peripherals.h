@@ -2,9 +2,10 @@
  *@file peripherals.h
  *@brief Peripheral initialization using structs
  **/
-#ifndef PERIPHERLAS_H
-#define PERIPHERLAS_H
+ #ifndef PERIPHERLAS_H
+ #define PERIPHERLAS_H
 #include <stdint.h>
+
 /* volatile wird oft benutzt vom fuer memory mapped io registers.
     damit sagen wir, dass der wert von der variable im laufe des runtimes veraendert wird,
     welches nicht von unserem code veraendert wird. (sondern von der hardware).
@@ -32,6 +33,16 @@ typedef struct GPIOx_t{
 	__IO uint32_t GPIOx_AFRL;
 	__IO uint32_t GPIOx_AFRH;
 }GPIOx_t;
+
+typedef struct SPIx_t {
+    __IO uint32_t SPI_CR1; 
+    __IO uint32_t SPI_SR; 
+    __IO uint32_t SPI_DR;
+    __IO uint32_t SPI_CRCPR;
+    __IO uint32_t SPI_TXCRCR;
+    __IO uint32_t SPI_I2SCFGR;
+    __IO uint32_t SPI_I2SPR;
+}SPIx_t;
 
 /*  da unser board nach reihenfolge io memory mapped ist und der RCC auf addr. 0x40023800 liegt, 
     erstellen wir eine Struktur, die vom Compiler dann in dieser Reihenfolge im Speicher automatisch mappt.
@@ -137,10 +148,86 @@ typedef struct EXTI_t{
     __IO uint32_t EXTI_PR;
 }EXTI_t;
 
+static inline void SPI1_Init(RCC_t *RCC, SPIx_t *SPI, GPIOx_t *GPIOA) {
+    const uint8_t MODER = 2;
+    // enable RCC SPI1 Clock
+    RCC->RCC_APB2ENR |= (1 << 12);
+    
+    // set pins to alternate mode
+    GPIOA->GPIOx_MODER &= ~((3 << (5 * MODER)) | (3 << (6 * MODER)) | (3 << (7 * MODER)));
+    GPIOA->GPIOx_MODER |=  ((2 << (5 * MODER)) | (2 << (6 * MODER)) | (2 << (7 * MODER)));
+        
+    // enable MOSI, MISO and SCK
+    GPIOA->GPIOx_AFRL &= ~((0xF << (5 * 4)) | (0xF << (6 * 4)) | (0xF << (7 * 4)));
+    GPIOA->GPIOx_AFRL |= ((0b0101 << (5 * 4)) | (0b0101 << (6 * 4)) | (0b0101 << (7 * 4)));
+    
+    // set baud rate (clock divider)
+    SPI->SPI_CR1 &= ~(0b111 << 3);
+    
+    // set clock polarity and phase
+    SPI->SPI_CR1 &= ~(3);
+
+    // set file transmission size (DFF) to 8 bits instead of 16
+    SPI->SPI_CR1 &= ~(1 << 11);
+    
+    // set SSM and SSI
+    SPI->SPI_CR1 |= (1 << 9);
+    SPI->SPI_CR1 &= ~(1 << 8);
+    
+    // set master mode and enable spi
+    SPI->SPI_CR1 |= (1 << 2);
+    SPI->SPI_CR1 |= (1 << 6);
+}
+
+static inline void SPI2_Init(RCC_t *RCC, SPIx_t *SPI, GPIOx_t *GPIOB) {
+    const uint8_t MODER = 2;
+    // enable RCC SPI2 Clock
+    RCC->RCC_APB1ENR |= (1 << 14);
+    
+    // set pins to alternate mode
+    GPIOB->GPIOx_MODER &= ~((3 << (13 * MODER)) | (3 << (14 * MODER)) | (3 << (15 * MODER)));
+    GPIOB->GPIOx_MODER |=  ((2 << (13 * MODER)) | (2 << (14 * MODER)) | (2 << (15 * MODER)));
+        
+    // enable MOSI, MISO and SCK
+    GPIOB->GPIOx_AFRH &= ~((0xF << (5 * 4)) | (0xF << (6 * 4)) | (0xF << (7 * 4)));
+    GPIOB->GPIOx_AFRH |= ((0b0101 << (5 * 4)) | (0b0101 << (6 * 4)) | (0b0101 << (7 * 4)));
+    
+    // baud rate not necessary!
+    
+    // set clock polarity and phase
+    SPI->SPI_CR1 &= ~(3);
+
+    // set file transmission size (DFF) to 8 bits instead of 16
+    SPI->SPI_CR1 &= ~(1 << 11);
+    
+    // set SSM disable SSI
+    SPI->SPI_CR1 &= ~(1 << 8);
+    SPI->SPI_CR1 |= (1 << 9);
+    
+    // set to slave mode and enable spi
+    SPI->SPI_CR1 &= ~(1 << 2);
+    SPI->SPI_CR1 |=  (1 << 6);
+}
+
+static inline void SPI_TransmitReceive(SPIx_t *masterSpi, SPIx_t *slaveSpi, uint8_t *transmissionBuffer, uint8_t *receptionBuffer, uint8_t arrayLength) {
+    uint8_t garbage __attribute__((unused));
+    for(int i = 0; i < arrayLength; i++) {
+        while (!(masterSpi->SPI_SR & (1 << 1)));
+        masterSpi->SPI_DR = transmissionBuffer[i];
+
+        while (!(masterSpi->SPI_SR & (1 << 0)));
+        garbage = masterSpi->SPI_DR; 
+
+        while (!(slaveSpi->SPI_SR & (1 << 0)));
+        receptionBuffer[i] = slaveSpi->SPI_DR;
+    }
+}
+
 // diese deklarationen erlauben uns diese pointer in anderen dateien zu benutzen.
 extern RCC_t * const RCC;
 extern GPIOx_t * const GPIOA;
 extern USART_t * const USART2;
 extern NVIC_t * const NVIC;
+extern SPIx_t * const SPI1;
 
 #endif

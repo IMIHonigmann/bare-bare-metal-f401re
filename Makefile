@@ -17,7 +17,7 @@ LD := $(wildcard $(SUP_DIR)/*.ld)
 
 # FLAGS
 MARCH = cortex-m4
-CFLAGS = -g -Wall -mcpu=$(MARCH) -mthumb -mfloat-abi=soft -I$(INC_DIR) -ffreestanding -nostartfiles
+CFLAGS = -g -Wall -mcpu=$(MARCH) -mthumb -mfloat-abi=soft -ffreestanding -nostartfiles
 LFLAGS = -nostdlib -T $(LD) -Wl,-Map=$(DEB_DIR)/main.map
 
 #PATHS
@@ -46,11 +46,11 @@ mkdeb:
 
 flash: FORCE
 	openocd -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) &
-	gdb-multiarch $(TARGET) -x $(SUP_DIR)/flash.gdb
+	arm-none-eabi-gdb $(TARGET) -x $(SUP_DIR)/flash.gdb
 
 debug: FORCE
 	openocd -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) &
-	gdb-multiarch $(TARGET) -x $(SUP_DIR)/debug.gdb
+	arm-none-eabi-gdb $(TARGET) -x $(SUP_DIR)/debug.gdb
 
 edit: FORCE
 	vim -S Session.vim
