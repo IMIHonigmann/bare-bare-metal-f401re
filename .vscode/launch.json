@@ -12,6 +12,7 @@
             "type": "cortex-debug",
             "runToEntryPoint": "main",
             "servertype": "stlink",
+            "gdbPath": "arm-none-eabi-gdb",
             "device": "STM32F401RE",
             "targetId": "STM32F401RE"
         },

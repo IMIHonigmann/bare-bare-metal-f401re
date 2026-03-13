@@ -48,6 +48,10 @@ flash: FORCE
 	openocd -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) &
 	arm-none-eabi-gdb $(TARGET) -x $(SUP_DIR)/flash.gdb
 
+stflash: $(TARGET)
+	arm-none-eabi-objcopy -O binary $(TARGET) $(DEB_DIR)/main.bin
+	st-flash --serial 066BFF555185754867175033 write $(DEB_DIR)/main.bin 0x08000000
+
 debug: FORCE
 	openocd -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) &
 	arm-none-eabi-gdb $(TARGET) -x $(SUP_DIR)/debug.gdb

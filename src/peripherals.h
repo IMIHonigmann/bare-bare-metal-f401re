@@ -35,13 +35,15 @@ typedef struct GPIOx_t{
 }GPIOx_t;
 
 typedef struct SPIx_t {
-    __IO uint32_t SPI_CR1; 
-    __IO uint32_t SPI_SR; 
-    __IO uint32_t SPI_DR;
-    __IO uint32_t SPI_CRCPR;
-    __IO uint32_t SPI_TXCRCR;
-    __IO uint32_t SPI_I2SCFGR;
-    __IO uint32_t SPI_I2SPR;
+    __IO uint32_t SPI_CR1;       // 0x00
+    __IO uint32_t SPI_CR2;       // 0x04
+    __IO uint32_t SPI_SR;        // 0x08
+    __IO uint32_t SPI_DR;        // 0x0C
+    __IO uint32_t SPI_CRCPR;     // 0x10
+    __IO uint32_t SPI_RXCRCR;    // 0x14
+    __IO uint32_t SPI_TXCRCR;    // 0x18
+    __IO uint32_t SPI_I2SCFGR;   // 0x1C
+    __IO uint32_t SPI_I2SPR;     // 0x20
 }SPIx_t;
 
 /*  da unser board nach reihenfolge io memory mapped ist und der RCC auf addr. 0x40023800 liegt, 
@@ -149,7 +151,11 @@ typedef struct EXTI_t{
 }EXTI_t;
 
 static inline void SPI1_Init(RCC_t *RCC, SPIx_t *SPI, GPIOx_t *GPIOA) {
+    
     const uint8_t MODER = 2;
+    // enable GPIOA clock
+    RCC->RCC_AHB1ENR |= (1 << 0);
+    
     // enable RCC SPI1 Clock
     RCC->RCC_APB2ENR |= (1 << 12);
     
@@ -160,6 +166,7 @@ static inline void SPI1_Init(RCC_t *RCC, SPIx_t *SPI, GPIOx_t *GPIOA) {
     // enable MOSI, MISO and SCK
     GPIOA->GPIOx_AFRL &= ~((0xF << (5 * 4)) | (0xF << (6 * 4)) | (0xF << (7 * 4)));
     GPIOA->GPIOx_AFRL |= ((0b0101 << (5 * 4)) | (0b0101 << (6 * 4)) | (0b0101 << (7 * 4)));
+
     
     // set baud rate (clock divider)
     SPI->SPI_CR1 &= ~(0b111 << 3);
@@ -181,6 +188,9 @@ static inline void SPI1_Init(RCC_t *RCC, SPIx_t *SPI, GPIOx_t *GPIOA) {
 
 static inline void SPI2_Init(RCC_t *RCC, SPIx_t *SPI, GPIOx_t *GPIOB) {
     const uint8_t MODER = 2;
+    // enable GPIOB clock
+    RCC->RCC_AHB1ENR |= (1 << 1);
+    
     // enable RCC SPI2 Clock
     RCC->RCC_APB1ENR |= (1 << 14);
     
@@ -210,13 +220,9 @@ static inline void SPI2_Init(RCC_t *RCC, SPIx_t *SPI, GPIOx_t *GPIOB) {
 }
 
 static inline void SPI_TransmitReceive(SPIx_t *masterSpi, SPIx_t *slaveSpi, uint8_t *transmissionBuffer, uint8_t *receptionBuffer, uint8_t arrayLength) {
-    uint8_t garbage __attribute__((unused));
     for(int i = 0; i < arrayLength; i++) {
         while (!(masterSpi->SPI_SR & (1 << 1)));
         masterSpi->SPI_DR = transmissionBuffer[i];
-
-        while (!(masterSpi->SPI_SR & (1 << 0)));
-        garbage = masterSpi->SPI_DR; 
 
         while (!(slaveSpi->SPI_SR & (1 << 0)));
         receptionBuffer[i] = slaveSpi->SPI_DR;
@@ -226,8 +232,10 @@ static inline void SPI_TransmitReceive(SPIx_t *masterSpi, SPIx_t *slaveSpi, uint
 // diese deklarationen erlauben uns diese pointer in anderen dateien zu benutzen.
 extern RCC_t * const RCC;
 extern GPIOx_t * const GPIOA;
+extern GPIOx_t * const GPIOB;
 extern USART_t * const USART2;
 extern NVIC_t * const NVIC;
 extern SPIx_t * const SPI1;
+extern SPIx_t * const SPI2;
 
 #endif

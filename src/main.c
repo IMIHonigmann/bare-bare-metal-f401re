@@ -58,7 +58,7 @@ int main(void){
     SPI_TransmitReceive(SPI1, SPI2, txBuffer, rxBuffer, BUFFER_LENGTH);
 
     int success = 1;
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < BUFFER_LENGTH; i++) {
         if(txBuffer[i] != rxBuffer[i]) {
             success = 0; 
             break;
